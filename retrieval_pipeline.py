@@ -1,7 +1,11 @@
 import os
+from operator import itemgetter
+
 from dotenv import load_dotenv
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 
@@ -59,23 +63,46 @@ def retrieval_chain_without_lcel(query: str):
     # Step 5: Return the content
     return response.content
 
+def create_retrieval_chain_with_lcel():
+    """
+    Create a retrieval chain using LCEL
+    :return: a chain that can be invoked with {"question": "...}
+    """
+    retrieval_chain = (
+        RunnablePassthrough.assign(
+            context=itemgetter("question") | retriever | format_docs
+        )
+        | prompt_template
+        | llm
+        | StrOutputParser()
+    )
+    return retrieval_chain
+
 if __name__ == '__main__':
     print('Retrieving documents...')
 
     # Query
     query = "What is Pinecone in machine learning?"
 
-    # ========================================================================
-    # Option 0: Raw invocation without RAG
-    # ========================================================================
-    print("\n" + "=" * 70)
-    print("IMPLEMENTATION 0: Raw LLM Invocation (No RAG)")
-    print("=" * 70)
-    result_raw = llm.invoke([HumanMessage(content=query)])
-    print("\nAnswer:")
-    print(result_raw.content)
+    # # ========================================================================
+    # # Option 0: Raw invocation without RAG
+    # # ========================================================================
+    # print("\n" + "=" * 70)
+    # print("IMPLEMENTATION 0: Raw LLM Invocation (No RAG)")
+    # print("=" * 70)
+    # result_raw = llm.invoke([HumanMessage(content=query)])
+    # print("\nAnswer:")
+    # print(result_raw.content)
 
     # # Option 1: Use implementation without Langchain expression language
     # print("Executing retrieval chain without LCEL...")
     # result = retrieval_chain_without_lcel(query)
     # print(result)
+
+    # # ========================================================================
+    # # Option 2: use implementation with LCEL (better)
+    # # ========================================================================
+
+    chain_with_lcel = create_retrieval_chain_with_lcel()
+    result_with_lcel = chain_with_lcel.invoke({"question": query})
+    print(result_with_lcel)
