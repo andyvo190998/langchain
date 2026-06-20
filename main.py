@@ -27,7 +27,7 @@ With an estimated net worth of over $1 trillion, Musk is the richest person in t
     chain = summary_prompt_template | llm
 
     response = chain.invoke(input={"information": information})
-
+    print(response)
 
 if __name__ == "__main__":
     main()
